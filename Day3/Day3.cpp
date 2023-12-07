@@ -85,7 +85,7 @@ void parsePartNumbers(const std::string& str, int puzzleLineIndex)
         if (isdigit(ch)) 
         {
             stream.unget();
-            if (stream >> num) //this attempts to extract an integer from the stream. If successful, it evaluates true (and also sets num to the int extracted)
+            if (stream >> num) //this attempts to extract an integer from the stream. If successful, it evaluates true, sets num to the int extracted, and advances index to the end of the int)
             {
                 puzzlePartNumber partNo;
                 partNo.partNumber = num;

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <map>
 using namespace std;
 
 
@@ -22,6 +23,9 @@ vector<string> puzzleLines;
 vector<puzzlePartNumber> puzzleParts;
 
 int runningTotal;
+
+//part two
+multimap<int, int> gearMap; //first int is the gear position, second int is the ratio number
 
 void parsePuzzleLines(const string& filePath) {
     ifstream file(filePath);
@@ -69,10 +73,44 @@ int checkPartNumberValidity(puzzlePartNumber part)
     return partValue;
 }
 
-/// <summary>
-/// parses a string for integers
-/// </summary>
-/// <param name="str"></param>
+//for part two
+//returns the index of the gear
+int checkPartGearValidity(puzzlePartNumber part)
+{
+
+    int gearIndex = 0;
+
+    for (int i = part.partLine - 1; i <= part.partLine + 1; i++)
+    {
+        if (i < 0 || i >= puzzleLines.size())
+        {
+            continue;
+        }
+        string puzzleLine = puzzleLines[i];
+        for (int j = part.partStartIndex - 1; j < part.partStartIndex + part.partNumLength + 1; j++)
+        {
+            if (j < 0 || j > puzzleLine.size())
+            {
+                continue;
+            }
+            if (puzzleLine[j] == '*')
+            {
+                char specialChar = puzzleLine[j];
+                cout << specialChar;
+                std::cout << "found valid part: " << "Line " << part.partLine << "; " << "Number " << part.partNumber << "\n";
+                
+                gearIndex = i * puzzleLine.size() + j;
+
+                return gearIndex;
+            }
+        }
+
+    }
+
+    return gearIndex;
+}
+
+//for part one - parses string for integer part numbers and creates part
 void parsePartNumbers(const std::string& str, int puzzleLineIndex) 
 {
 
@@ -109,6 +147,43 @@ void parsePartNumbers(const std::string& str, int puzzleLineIndex)
     
 }
 
+void parsePartNumbersPartTwo(const std::string& str, int puzzleLineIndex)
+{
+    std::istringstream stream(str);
+    char ch;
+    int num;
+
+    while (stream >> ch)
+    {
+        if (isdigit(ch))
+        {
+            stream.unget();
+            if (stream >> num) //this attempts to extract an integer from the stream. If successful, it evaluates true, sets num to the int extracted, and advances index to the end of the int)
+            {
+                puzzlePartNumber partNo;
+                partNo.partNumber = num;
+                partNo.partLine = puzzleLineIndex;
+                partNo.partNumLength = (int)std::to_string(num).length();
+                if ((int)stream.tellg() == -1) // note that stream.tellg can return -1 if it's out of bounds
+                {
+                    partNo.partStartIndex = str.length() - 1 - partNo.partNumLength;
+                }
+                else
+                {
+                    partNo.partStartIndex = (int)stream.tellg() - partNo.partNumLength;
+                }
+                int gear = checkPartGearValidity(partNo);
+                
+                gearMap.insert({ gear, partNo.partNumber });
+
+                puzzleParts.push_back(partNo);
+                
+            }
+        }
+
+    }
+}
+
 
 int dayThreePartOne()
 {
@@ -126,30 +201,61 @@ int dayThreePartOne()
     {
         parsePartNumbers(puzzleLines[i], i);
     }
+    cout << "Part 1 Total: " << runningTotal;
+
     return 0;
 }
 
 int dayThreePartTwo()
 {
-    //look for '*' instead??
-    //set ratio ints to zero initially
-    //scan prior and next lines in box around gear
-    //when int is found, find the full int.. somehow
-    //when second int is found, find full int as well 
-    //if a third int is found, return 0
-    //return first times second gear -- add to running total
+    //only look for numbers adjacent to *
+    //when one is found, add it to a multimap with key value equivalent to the index of * (index is found by row*column)
+    //when all numbers are found, do a for each (?) in the multimap and look for equivalent keys
+    //if two are found, multiply the values together, add to the running sum
 
-    //OR
-    //replace valid part num to look only for gear
-    //when valid part is found, add to a gear struct
+
+    parsePuzzleLines("Day3.txt");
+    runningTotal = 0;
+    for (int i = 0; i < puzzleLines.size(); i++)
+    {
+        parsePartNumbersPartTwo(puzzleLines[i], i);
+    }
+
+    vector<int> countedGears = {};
+
+    for (auto it = gearMap.begin(); it != gearMap.end(); ++it) 
+    {
+        int gearNumCount = 0;
+
+        int gearIndex = it->first;
+
+        //check that there are only two values for this gear index
+        if (gearMap.count(gearIndex) != 2) continue;
+
+        //making sure we don't count gears twice
+        if (find(countedGears.begin(), countedGears.end(), gearIndex) != countedGears.end()) continue;
+
+        countedGears.push_back(gearIndex);
+
+        auto range = gearMap.equal_range(gearIndex);
+        int gearRatio = 1;
+
+        for (auto i = range.first; i != range.second; ++i) {
+            gearRatio *= i->second;
+            std::cout << i->first << " index gear has number: " << i->second << '\n';
+        }
+        runningTotal += gearRatio;
+    }
+
+    std::cout << "gear total: " << runningTotal;
+    return 0;
 }
 
 int main()
 {
-    dayThreePartOne();
-    cout << "Final Total: " << runningTotal;
+    //dayThreePartOne();
+    dayThreePartTwo();
+
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
 

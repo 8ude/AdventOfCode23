@@ -3,30 +3,43 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <map>
 #include <thread>
+#include <limits>
+#include <thread>
+#include <mutex>
 using namespace std;
 
-vector<unsigned long long int> seeds;
+static vector<unsigned long long int> seeds;
 
-vector<unsigned long long int> locations;
-unsigned long long int lowestLocNum = ULLONG_MAX;
+static unsigned long long int lowestLocNum = ULLONG_MAX;
 
 //for keeping track of what portion we're currently mapping
 enum class mapPortion : char {none, seedSoil, soilFert, fertWater, waterLight, lightTemp, tempHumid, humidloc};
-mapPortion currentMap;
+static mapPortion currentMap;
 
 //3-int vector for map
 struct mappingRange
 {
-    unsigned long long int destRangeStart;
-    unsigned long long int sourceRangeStart;
-    unsigned long long int rangeLength;
+    unsigned long long int m_destRangeStart;
+    unsigned long long int m_sourceRangeStart;
+    unsigned long long int m_rangeLength;
 };
 
-vector<mappingRange> seedSoilMap, soilFertMap, fertWaterMap, waterLightMap, lightTempMap, tempHumidMap, humidLocMap;
+//used for seed ranges in part 2
+struct seedRangeData
+{
+    unsigned long long int m_seedRangeStart;
+    unsigned long long int m_seedRangeLength;
+};
+
+static vector<seedRangeData> seedRanges;
+
+static vector<mappingRange> seedSoilMap, soilFertMap, fertWaterMap, waterLightMap, lightTempMap, tempHumidMap, humidLocMap;
+static mutex s_CoutMutex;
+
 
 //trying to make partOne more readable
+//since we know the order of these, we could skip this step and use an enum to categorize the data sets 
 mapPortion evalCurrentMapPortion(string lineString)
 {
     if (lineString == "seed-to-soil map:")
@@ -67,9 +80,9 @@ mapPortion evalCurrentMapPortion(string lineString)
 mappingRange getMapRangeFromLine(string mappingLine)
 {
     mappingRange newMap;
-    newMap.destRangeStart = 0;
-    newMap.sourceRangeStart = 0;
-    newMap.rangeLength = 0;
+    newMap.m_destRangeStart = 0;
+    newMap.m_sourceRangeStart = 0;
+    newMap.m_rangeLength = 0;
 
     istringstream intFinder(mappingLine);
 
@@ -80,21 +93,21 @@ mappingRange getMapRangeFromLine(string mappingLine)
 
         if (index == 0)
         {
-            newMap.destRangeStart = num;
+            newMap.m_destRangeStart = num;
             
         }
         else if (index == 1)
         {
-            newMap.sourceRangeStart = num;
+            newMap.m_sourceRangeStart = num;
         }
         else if (index == 2)
         {
-            newMap.rangeLength = num;
+            newMap.m_rangeLength = num;
         }
         index++;
     }
 
-    cout << "map dest end: " << newMap.destRangeStart + newMap.rangeLength << "; source end: " << newMap.sourceRangeStart + newMap.rangeLength << "; range length: " << newMap.rangeLength <<"\n";
+    cout << "map dest end: " << newMap.m_destRangeStart + newMap.m_rangeLength << "; source end: " << newMap.m_sourceRangeStart + newMap.m_rangeLength << "; range length: " << newMap.m_rangeLength <<"\n";
 
     return newMap;
 }
@@ -105,7 +118,7 @@ void parseFilePartOne(const string& filename)
     vector<string> seedSoilMapStrings, soilFertMapStrings, fertWaterMapStrings, waterLightMapStrings, lightTempMapStrings, tempHumidMapStrings, humidLocMapStrings;
 
     ifstream file(filename);
-    std::string tempLine;
+    string tempLine;
     currentMap = mapPortion::none;
     
     int lineIndex = 0; //why do i need so many damn indeces????
@@ -129,6 +142,10 @@ void parseFilePartOne(const string& filename)
             seeds.push_back(num); //add number to seed strings
             cout << "seeds: " << num << "\n";
             
+        }
+        for (int i = 0; i < seeds.size(); i+=2)
+        {
+            seedRanges.push_back({ seeds[i], seeds[i + 1] });
         }
         
 
@@ -200,20 +217,21 @@ void parseFilePartOne(const string& filename)
     }
 }
 
-unsigned long long int deMapSeedPath(unsigned long long int inputVal, vector<mappingRange> mappingPortion)
+
+const unsigned long long int deMapSeedPath(unsigned long long int inputVal, vector<mappingRange> mappingPortion)
 {
     unsigned long long int outputVal = inputVal;
     for(mappingRange rMapRange : mappingPortion)
     {
-        if (inputVal >= rMapRange.sourceRangeStart && inputVal < rMapRange.sourceRangeStart + rMapRange.rangeLength)
+        if (inputVal >= rMapRange.m_sourceRangeStart && inputVal < rMapRange.m_sourceRangeStart + rMapRange.m_rangeLength)
         {
-            outputVal = (inputVal - rMapRange.sourceRangeStart) + rMapRange.destRangeStart;
+            outputVal = (inputVal - rMapRange.m_sourceRangeStart) + rMapRange.m_destRangeStart;
         }
     }
     return outputVal;
 }
 
-unsigned long long int traceSeedPathPartOne(unsigned long long int seedNum)
+const unsigned long long int traceSeedPathPartOne(unsigned long long int seedNum)
 {
     unsigned long long int locNum = seedNum;
     unsigned long long int soilNum = deMapSeedPath(seedNum, seedSoilMap);
@@ -242,44 +260,57 @@ void dayFivePartOne(const string& filename)
     cout << "lowest location number: " << lowestLocNum << "\n";
 }
 
-void seedThread(int vectorIndex, unsigned long long int lastSeedNum)
-{
-    unsigned long long int locNumber = ULLONG_MAX;
-    //even number index -- seed range
-    for (long long unsigned int seed_j = lastSeedNum; seed_j < lastSeedNum + seeds[vectorIndex]; seed_j++)
+//Day Two
+void FindLowestLocationForSeedRange(const seedRangeData& seed, unsigned long long& result) {
+    unsigned long long  lowest = std::numeric_limits<unsigned long long>::max();
+
     {
-        locNumber = traceSeedPathPartOne(seed_j);
-        if (locNumber < lowestLocNum) lowestLocNum = locNumber;
+        std::lock_guard<std::mutex> lock(s_CoutMutex);
+        std::cout << "Thread started, seed range: " << seed.m_seedRangeStart << " " << seed.m_seedRangeLength << std::endl;
     }
+
+    for (unsigned long long seed_num = seed.m_seedRangeStart; seed_num < seed.m_seedRangeStart + seed.m_seedRangeLength; ++seed_num) {
+        
+         unsigned long long mLocation = traceSeedPathPartOne(seed_num);
+
+        if (mLocation < lowest) {
+            lowest = mLocation;
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(s_CoutMutex);
+        std::cout << "Thread Finished, seed range: " << seed.m_seedRangeStart << " " << seed.m_seedRangeLength<< " Result: " << lowest << std::endl;
+    }
+
+    result = lowest;
 }
 
 void dayFivePartTwo(const string& filename)
 {
     parseFilePartOne(filename);
     unsigned long long int lastSeedNum = 0;
-    for (int i = 0; i < seeds.size(); i++)
-    {
-        unsigned long long int locNumber; 
-        if (i % 2 == 0) {
-            
-            //odd number index -- seed start
-            lastSeedNum = seeds[i];
-            locNumber = traceSeedPathPartOne(seeds[i]);
-            if (locNumber < lowestLocNum) lowestLocNum = locNumber;
-        }
-        else
-        {
-            thread t(seedThread, i, lastSeedNum);
-            //even number index -- seed range
-            t.join();
-        }
+    vector<thread> threads;
+    vector<unsigned long long> results;
+    results.resize(seedRanges.size());
 
-        cout << "last seed number: " << lastSeedNum << "\n";
-        cout << "lowest loc number: " << lowestLocNum << "\n";
-
-
+    for (int i = 0; i < seedRanges.size(); ++i) {
+        threads.emplace_back(FindLowestLocationForSeedRange, std::ref(seedRanges[i]), std::ref(results[i]));
     }
-    cout << "lowest location number: " << lowestLocNum << "\n";
+
+    for (std::thread& t : threads) {
+        t.join();
+    }
+
+    unsigned long long  lowest = std::numeric_limits<unsigned long long>::max();
+    for (int i = 0; i < results.size(); i++) {
+        if (results[i] < lowest) {
+            lowest = results[i];
+        }
+    }
+
+    cout << "Lowest Destination: " << lowest << std::endl;
+
 
 }
 

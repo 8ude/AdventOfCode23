@@ -14,6 +14,7 @@ static vector<unsigned long long int> seeds;
 static unsigned long long int lowestLocNum = ULLONG_MAX;
 
 //for keeping track of what portion we're currently mapping
+//in retrospect a regular enum probably would have worked better; for some reason an enum class was suggested by VS
 enum class mapPortion : char {none, seedSoil, soilFert, fertWater, waterLight, lightTemp, tempHumid, humidloc};
 static mapPortion currentMap;
 
@@ -38,8 +39,7 @@ static vector<mappingRange> seedSoilMap, soilFertMap, fertWaterMap, waterLightMa
 static mutex s_CoutMutex;
 
 
-//trying to make partOne more readable
-//since we know the order of these, we could skip this step and use an enum to categorize the data sets 
+//since we know the order of these, I could have skipped this step and just use an enum to categorize and index the data sets 
 mapPortion evalCurrentMapPortion(string lineString)
 {
     if (lineString == "seed-to-soil map:")
@@ -94,7 +94,6 @@ mappingRange getMapRangeFromLine(string mappingLine)
         if (index == 0)
         {
             newMap.m_destRangeStart = num;
-            
         }
         else if (index == 1)
         {
@@ -217,7 +216,7 @@ void parseFilePartOne(const string& filename)
     }
 }
 
-
+//part one and two - finding the output of a map
 const unsigned long long int deMapSeedPath(unsigned long long int inputVal, vector<mappingRange> mappingPortion)
 {
     unsigned long long int outputVal = inputVal;
@@ -234,14 +233,14 @@ const unsigned long long int deMapSeedPath(unsigned long long int inputVal, vect
 const unsigned long long int traceSeedPathPartOne(unsigned long long int seedNum)
 {
     unsigned long long int locNum = seedNum;
-    unsigned long long int soilNum = deMapSeedPath(seedNum, seedSoilMap);
-    unsigned long long int fertNum = deMapSeedPath(soilNum, soilFertMap);
-    unsigned long long int waterNum = deMapSeedPath(fertNum, fertWaterMap);
-    unsigned long long int lightNum = deMapSeedPath(waterNum, waterLightMap);
-    unsigned long long int tempNum = deMapSeedPath(lightNum, lightTempMap);
-    unsigned long long int humNum = deMapSeedPath(tempNum, tempHumidMap);
-    locNum = deMapSeedPath(humNum, humidLocMap);
-    return locNum;
+    locNum = deMapSeedPath(seedNum, seedSoilMap);
+    locNum = deMapSeedPath(locNum, soilFertMap);
+    locNum = deMapSeedPath(locNum, fertWaterMap);
+    locNum = deMapSeedPath(locNum, waterLightMap);
+    locNum = deMapSeedPath(locNum, lightTempMap);
+    locNum = deMapSeedPath(locNum, tempHumidMap);
+    locNum = deMapSeedPath(locNum, humidLocMap);
+    return locNum; 
 }
 
 void dayFivePartOne(const string& filename)
@@ -260,7 +259,7 @@ void dayFivePartOne(const string& filename)
     cout << "lowest location number: " << lowestLocNum << "\n";
 }
 
-//Day Two
+//Part Two - setting up seed range for multi thread
 void FindLowestLocationForSeedRange(const seedRangeData& seed, unsigned long long& result) {
     unsigned long long  lowest = std::numeric_limits<unsigned long long>::max();
 
@@ -311,7 +310,7 @@ void dayFivePartTwo(const string& filename)
 
     cout << "Lowest Destination: " << lowest << std::endl;
 
-
+    
 }
 
 int main()

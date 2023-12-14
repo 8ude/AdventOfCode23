@@ -18,8 +18,10 @@ vector<float> times = { 57, 72, 69, 92 };
 vector<float> distances = { 291, 1172, 1176, 2026 };
 
 //part two
-long long timePartTwo = 71530;
-long long distancePartTwo = 940200;
+long long timePartTwo = 57726992;
+long long distancePartTwo = 291117211762026;
+
+
 
 vector<long long int> numWinningTimes;
 
@@ -41,21 +43,21 @@ int quadFormulaHigh(float a, float b, float c)
     return floor(quadHigh);
 }
 
-long long unsigned int quadFormulaLowPtTwo(long long a, long long b, long long c)
+long long unsigned int quadFormulaLowPtTwo(long float a, long float b, long float c)
 {
-    long long quadLow = (-b + sqrt(pow(b, 2) - (4 * a * c))) / (2 * a);
+    long float quadLow = (-b + sqrt(pow(b, 2.0) - (4.0 * a * c))) / (2.0 * a);
     cout << "quad low: " << quadLow << "\n";
     cout << "quad low ceil: " << ceill(quadLow) << "\n";
     if (ceill(quadLow) == quadLow) return quadLow + 1;
 
     return ceill(quadLow);
 }
-long long unsigned int quadFormulaHighPtTwo(float a, float b, float c)
+long long unsigned int quadFormulaHighPtTwo(long float a, long  float b, long  float c)
 {
 
-    long long quadHigh = (-b - sqrt(pow(b, 2.0) - (4.0 * a * c))) / (2.0 * a);
-    cout << "quad heigh: " << quadHigh << "\n";
-    cout << "quad heigh ceil: " << floorl(quadHigh) << "\n";
+    long float quadHigh = (-b - sqrt(pow(b, 2.0) - (4.0 * a * c))) / (2.0 * a);
+    cout << "quad high: " << quadHigh << "\n";
+    cout << "quad high ceil: " << floorl(quadHigh) << "\n";
     if (floorl(quadHigh) == quadHigh) return quadHigh - 1;
 
     return floorl(quadHigh);
@@ -98,7 +100,7 @@ void partOne()
 void partTwo()
 {
     cout << "puzzle solution part 2: " << numWaysToWinPtTwo(timePartTwo, distancePartTwo);
-    //^^ I had to inexplicably add one to get the correct answer here, and it doesn't make any sense to me
+
 }
 
 int main()

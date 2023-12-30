@@ -8,7 +8,7 @@ using namespace std;
 
 vector<string> parseLinesIntoStrings(const string& filename, bool debug = false)
 {
-    vector<string> stringVector;
+	vector<string> stringVector;
     ifstream file(filename);
     string templine;
     if (!file.is_open())
@@ -20,7 +20,7 @@ vector<string> parseLinesIntoStrings(const string& filename, bool debug = false)
         while (std::getline(file, templine))
         {
             stringVector.push_back(templine);
-
+            
         }
 
         file.close();
@@ -32,18 +32,17 @@ vector<string> parseLinesIntoStrings(const string& filename, bool debug = false)
             cout << line << "\n";
         }
     }
-
+    
     return stringVector;
 }
 
-vector<string> splitString(const string& s, char delimiter, bool debug = false) {
+vector<string> splitString(const string& s, char delimiter) {
     stringstream ss(s);
     string item;
     vector<string> tokens;
 
     while (getline(ss, item, delimiter)) {
         tokens.push_back(item);
-        if (debug) cout << item << "\n";
     }
 
     return tokens;

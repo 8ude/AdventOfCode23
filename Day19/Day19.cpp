@@ -1,5 +1,5 @@
 // Day19.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
+// DIDN'T FINISH :(
 
 #include <iostream>
 #include <fstream>
@@ -102,6 +102,7 @@ void parseFile(const string& filename)
     }
     while (std::getline(file, tempLine))
     {
+    }
 }
 
 void partOne()
